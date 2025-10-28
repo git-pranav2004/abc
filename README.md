@@ -192,7 +192,7 @@ Install OWASP CRS (copy rules into /etc/modsecurity/crs):
 
 Edit Apache modsecurity loader (/etc/apache2/mods-enabled/security2.conf) so it includes the main config and CRS (single include set). Replace content with the snippet below (be careful to not include duplicate includes):
 
-```<IfModule security2_module>
+<IfModule security2_module>
     SecDataDir /var/cache/modsecurity
 
     # Load main config
@@ -201,7 +201,7 @@ Edit Apache modsecurity loader (/etc/apache2/mods-enabled/security2.conf) so it 
     # Load CRS setup and rules
     IncludeOptional /etc/modsecurity/crs/crs-setup.conf
     IncludeOptional /etc/modsecurity/crs/rules/*.conf
-</IfModule>```
+</IfModule>
 
 
 Important: Do not include /etc/modsecurity/*.conf and the explicit paths at the same time — duplicate includes cause duplicate rule IDs and Apache will fail to start.
