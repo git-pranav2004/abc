@@ -63,7 +63,7 @@ hostname -I
 From host, confirm HTTP reachability:
 
 # from host machine
-curl -I http://<VM_IP>/
+```curl -I http://<VM_IP>/```
 
 
 If host cannot reach the VM, check VMware network adapter (Bridged vs NAT vs Host-Only) and host firewall.
@@ -133,9 +133,9 @@ Configure DVWA: copy config template and edit:
 
 Inside config.inc.php set DB credentials (example lines to modify):
 
-$_DVWA[ 'db_user' ] = 'dvwa';
-$_DVWA[ 'db_password' ] = 'dvwa_password';
-$_DVWA[ 'db_database' ] = 'dvwa';
+```$_DVWA[ 'db_user' ] = 'dvwa';```
+```$_DVWA[ 'db_password' ] = 'dvwa_password';```
+```$_DVWA[ 'db_database' ] = 'dvwa';```
 
 
 Import DB / run setup:
@@ -146,7 +146,7 @@ Option B (manual with SQL dump if necessary).
 
 Open DVWA in host browser:
 
-http://<VM_IP>/dvwa/
+```http://<VM_IP>/dvwa/```
 
 
 Default login: admin / password (change in DVWA settings if needed).
@@ -159,12 +159,12 @@ We installed ModSecurity (Apache module) and fetched CRS. Commands below assume 
 
 Install ModSecurity (Debian/Ubuntu package):
 
-sudo apt install -y libapache2-mod-security2
+```sudo apt install -y libapache2-mod-security2```
 
 
 Check module loaded:
 
-sudo apachectl -M | grep security2
+```sudo apachectl -M | grep security2```
 # expected: security2_module (shared)
 
 
@@ -173,26 +173,26 @@ Create ModSecurity directory & ensure main config exists:
 On Debian the package installs /etc/modsecurity/modsecurity.conf. If not, copy the recommended starter:
 
 # If installed package placed modsecurity.conf-recommended:
-sudo cp /etc/modsecurity/modsecurity.conf-recommended /etc/modsecurity/modsecurity.conf
+```sudo cp /etc/modsecurity/modsecurity.conf-recommended /etc/modsecurity/modsecurity.conf```
 
 
 Install OWASP CRS (copy rules into /etc/modsecurity/crs):
 
 # install git if not present
-sudo apt install -y git
+```sudo apt install -y git```
 
 # clone CRS to temporary folder
-sudo git clone https://github.com/coreruleset/coreruleset.git /tmp/owasp-crs
+```sudo git clone https://github.com/coreruleset/coreruleset.git /tmp/owasp-crs```
 
 # create crs folder and copy files
-sudo mkdir -p /etc/modsecurity/crs
-sudo cp /tmp/owasp-crs/crs-setup.conf.example /etc/modsecurity/crs/crs-setup.conf
-sudo cp -r /tmp/owasp-crs/rules /etc/modsecurity/crs/
+```sudo mkdir -p /etc/modsecurity/crs```
+```sudo cp /tmp/owasp-crs/crs-setup.conf.example /etc/modsecurity/crs/crs-setup.conf```
+```sudo cp -r /tmp/owasp-crs/rules /etc/modsecurity/crs/```
 
 
 Edit Apache modsecurity loader (/etc/apache2/mods-enabled/security2.conf) so it includes the main config and CRS (single include set). Replace content with the snippet below (be careful to not include duplicate includes):
 
-<IfModule security2_module>
+```<IfModule security2_module>
     SecDataDir /var/cache/modsecurity
 
     # Load main config
@@ -201,16 +201,16 @@ Edit Apache modsecurity loader (/etc/apache2/mods-enabled/security2.conf) so it 
     # Load CRS setup and rules
     IncludeOptional /etc/modsecurity/crs/crs-setup.conf
     IncludeOptional /etc/modsecurity/crs/rules/*.conf
-</IfModule>
+</IfModule>```
 
 
 Important: Do not include /etc/modsecurity/*.conf and the explicit paths at the same time — duplicate includes cause duplicate rule IDs and Apache will fail to start.
 
 Restart Apache and verify CRS loaded:
 
-sudo apachectl configtest
-sudo systemctl restart apache2
-sudo tail -n 50 /var/log/apache2/error.log
+```sudo apachectl configtest```
+```sudo systemctl restart apache2```
+```sudo tail -n 50 /var/log/apache2/error.log```
 
 
 Look for messages like ModSecurity: Loaded ... rules or similar.
@@ -301,24 +301,24 @@ deny will return 403/interrupt the request.
 
 Permissions:
 
-sudo chown root:root /etc/modsecurity/local/local_rules.conf
-sudo chmod 644 /etc/modsecurity/local/local_rules.conf
+```sudo chown root:root /etc/modsecurity/local/local_rules.conf```
+```sudo chmod 644 /etc/modsecurity/local/local_rules.conf```
 
 Testing workflow — step-by-step (DVWA UI + curl)
 
 Important: always configtest after edits:
 
-sudo apachectl configtest
+```sudo apachectl configtest```
 # expect: Syntax OK
-sudo systemctl reload apache2
+```sudo systemctl reload apache2```
 
 1) Start live log watcher (open in VM)
 
 Use multi-line audit log (preferred):
 
-sudo tail -f /var/log/apache2/modsec_audit.log
+```sudo tail -f /var/log/apache2/modsec_audit.log```
 # If audit log empty, use:
-sudo tail -f /var/log/apache2/error.log
+```sudo tail -f /var/log/apache2/error.log```
 
 2) XSS (Reflected) test — DVWA UI
 
@@ -374,20 +374,20 @@ An audit record is a multi-part block between markers:
 To quickly find occurrences:
 
 # search by rule id
-sudo grep -n 'id "100001"' /var/log/apache2/modsec_audit.log
+```sudo grep -n 'id "100001"' /var/log/apache2/modsec_audit.log```
 
 # or by message string
-sudo grep -n "Custom_XSS_Attempt_Blocked" /var/log/apache2/modsec_audit.log
+```sudo grep -n "Custom_XSS_Attempt_Blocked" /var/log/apache2/modsec_audit.log```
 
 # show last 200 lines
-sudo tail -n 200 /var/log/apache2/modsec_audit.log | less
+```sudo tail -n 200 /var/log/apache2/modsec_audit.log | less```
 
 
 If you prefer short, single-line output (error.log contains shorter lines):
 
-sudo tail -f /var/log/apache2/error.log
+```sudo tail -f /var/log/apache2/error.log```
 # or search historic
-sudo grep -i "ModSecurity" /var/log/apache2/error.log
+```sudo grep -i "ModSecurity" /var/log/apache2/error.log```
 
 Common errors we encountered & exact fixes (with commands)
 1) Apache fails to start — duplicate rule ID
@@ -400,7 +400,7 @@ Fixes:
 
 Ensure security2.conf includes only the explicit includes (no IncludeOptional /etc/modsecurity/*.conf plus the explicit ones). Edit:
 
-sudo nano /etc/apache2/mods-enabled/security2.conf
+```sudo nano /etc/apache2/mods-enabled/security2.conf```
 
 
 Make it look like:
@@ -413,15 +413,15 @@ IncludeOptional /etc/modsecurity/local/*.conf
 
 If a duplicate id still appears, search:
 
-sudo grep -R "id:900990\|900990" /etc/modsecurity -n
+```sudo grep -R "id:900990\|900990" /etc/modsecurity -n```
 
 
 Comment out duplicate definition or remove the duplicate include.
 
 After correction:
 
-sudo apachectl configtest
-sudo systemctl restart apache2
+```sudo apachectl configtest```
+```sudo systemctl restart apache2```
 
 2) Syntax error in custom rules
 
@@ -438,8 +438,8 @@ If you used backslashes, be sure they are at end of line and not escaping the qu
 
 Check:
 
-ls -l /etc/modsecurity/crs/rules | head
-sudo sed -n '1,200p' /etc/apache2/mods-enabled/security2.conf
+```ls -l /etc/modsecurity/crs/rules | head```
+```sudo sed -n '1,200p' /etc/apache2/mods-enabled/security2.conf```
 
 
 If rules folder missing, re-copy the repo rules into /etc/modsecurity/crs/rules and restart Apache.
@@ -448,8 +448,8 @@ If rules folder missing, re-copy the repo rules into /etc/modsecurity/crs/rules 
 
 Confirm correct log location:
 
-ls -l /var/log/apache2/modsec_audit.log /var/log/apache2/error.log
-sudo tail -n 50 /var/log/apache2/error.log
+```ls -l /var/log/apache2/modsec_audit.log /var/log/apache2/error.log```
+```sudo tail -n 50 /var/log/apache2/error.log```
 
 
 Ensure ModSecurity's SecAuditLog points to /var/log/apache2/modsec_audit.log in /etc/modsecurity/modsecurity.conf.
@@ -476,7 +476,7 @@ www-data ALL=(root) NOPASSWD: /usr/sbin/apachectl -k graceful
 
 Then backend can run:
 
-sudo /usr/sbin/apachectl -k graceful
+```sudo /usr/sbin/apachectl -k graceful```
 
 
 Do not give web process full sudo or systemctl blanket access.
@@ -487,49 +487,49 @@ VM snapshot: Use VMware → Snapshot → Take Snapshot (name: Pre-Demo-YYYYMMDD)
 
 Backup files:
 
-sudo cp /etc/modsecurity/local/local_rules.conf /root/backup_local_rules.conf.$(date +%F_%T)
-sudo tar -czvf /root/crs_backup_$(date +%F).tar.gz /etc/modsecurity/crs /etc/modsecurity/local
-sudo mysqldump -u root -p dvwa > /root/dvwa_db_backup_$(date +%F).sql
+```sudo cp /etc/modsecurity/local/local_rules.conf /root/backup_local_rules.conf.$(date +%F_%T)```
+```sudo tar -czvf /root/crs_backup_$(date +%F).tar.gz /etc/modsecurity/crs /etc/modsecurity/local```
+```sudo mysqldump -u root -p dvwa > /root/dvwa_db_backup_$(date +%F).sql```
 
 
 Demo quick script (run and explain):
 
 # Verify services & modules
-sudo systemctl status apache2 --no-pager
-sudo systemctl status mariadb --no-pager
-sudo apachectl -M | grep security2
+```sudo systemctl status apache2 --no-pager```
+```sudo systemctl status mariadb --no-pager```
+```sudo apachectl -M | grep security2```
 
 # Show rule files
-ls -l /etc/modsecurity/crs/rules | wc -l
-ls -l /etc/modsecurity/local | sed -n '1,100p'
+```ls -l /etc/modsecurity/crs/rules | wc -l```
+```ls -l /etc/modsecurity/local | sed -n '1,100p'```
 
 # Start watching logs
-sudo tail -f /var/log/apache2/modsec_audit.log
+```sudo tail -f /var/log/apache2/modsec_audit.log```
 # Perform XSS test on host browser and show log entry.
 
 Appendix — useful scripts & copy-paste snippets
 Create local rules file (one command block)
-sudo mkdir -p /etc/modsecurity/local
-sudo tee /etc/modsecurity/local/local_rules.conf > /dev/null <<'EOF'
+```sudo mkdir -p /etc/modsecurity/local```
+```sudo tee /etc/modsecurity/local/local_rules.conf > /dev/null <<'EOF'```
 SecRule ARGS "@rx (?i)<script" "id:100001,phase:2,deny,log,msg:'Custom_XSS_Attempt_Blocked'"
 SecRule ARGS "@rx (?i)(\bUNION\b|\bSELECT\b.*\bFROM\b|\bOR\s+1=1\b|'\-\-)" "id:100002,phase:2,pass,log,msg:'Custom_SQLi_Detected'"
 SecRule REQUEST_HEADERS:Content-Disposition "@rx (?i)filename=.*\.(php|phtml|jsp|asp|aspx|exe|sh|pl|cgi)\b" "id:100003,phase:2,deny,status:403,log,msg:'Custom_Blocked_Upload_Ext'"
 EOF
-sudo chown root:root /etc/modsecurity/local/local_rules.conf
-sudo chmod 644 /etc/modsecurity/local/local_rules.conf
+```sudo chown root:root /etc/modsecurity/local/local_rules.conf```
+```sudo chmod 644 /etc/modsecurity/local/local_rules.conf```
 
 Toggle DetectionOnly <-> On quickly
 # DetectionOnly
-sudo sed -i 's/SecRuleEngine On/SecRuleEngine DetectionOnly/' /etc/modsecurity/modsecurity.conf
-sudo apachectl configtest && sudo systemctl reload apache2
+```sudo sed -i 's/SecRuleEngine On/SecRuleEngine DetectionOnly/' /etc/modsecurity/modsecurity.conf```
+```sudo apachectl configtest && sudo systemctl reload apache2```
 
 # Back to On
 ```sudo sed -i 's/SecRuleEngine DetectionOnly/SecRuleEngine On/' /etc/modsecurity/modsecurity.conf```
 ```sudo apachectl configtest && sudo systemctl reload apache2```
 
 Search audit for rule IDs/messages
-sudo grep -n 'id "100001"' /var/log/apache2/modsec_audit.log
-sudo grep -n "Custom_XSS_Attempt_Blocked" /var/log/apache2/modsec_audit.log
+```sudo grep -n 'id "100001"' /var/log/apache2/modsec_audit.log```
+```sudo grep -n "Custom_XSS_Attempt_Blocked" /var/log/apache2/modsec_audit.log```
 
 Quick curl tests
 curl -i "http://<VM_IP>/dvwa/vulnerabilities/xss_r/?name=%3Cscript%3Ealert(1)%3C%2Fscript%3E"
